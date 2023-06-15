@@ -8,8 +8,11 @@ inter_au_gation = pygame.transform.scale(inter_au_gation, [50, 50])
 terrain = {}
 terrains = {}
 bleu_print = {}
-zoom = 10
+zoom = 1
 a_modif = 0
+louchs = []
+louches = []
+louche = []
 rgb = [200, 200, 200]
 pos = []
 click = False
@@ -20,7 +23,7 @@ menu = "parametre"
 selec = "plus"
 s_menu = "shema"
 parametre = {
-    "size": [192, 108],
+    "size": [int(1920 / zoom) - 1, int(1080 / zoom) - 1],
     "elec": {
         "color": [(0, 0, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255),
                   (100, 100, 100), (255, 255, 255)],
@@ -38,6 +41,12 @@ parametre = {
              8]],
         "propagation": [],
         "shema": []
+    },
+    "sable": {
+        "color": [(0, 0, 0), (255, 255, 0)],
+        "compteur": [],
+        "propagation": [],
+        "shema": [[-2, 0, -2, -2, -1, -2, -1, -2, -2, 0], [-2, -2, -2, 0, -1, -2, -2, -2, -1, 0], [-2, -2, 0, -2, -1, -2, -2, -1, -2, 0]]
     },
     "plus": {
         "color": [(0, 0, 0)],
@@ -152,6 +161,16 @@ cell_size = [int(screen_size[0] / zoom), int(screen_size[1] / zoom)]
 screen = pygame.display.set_mode(screen_size)
 
 
+def cange(x, y, new_valeur):
+    terrains[x][y] = new_valeur
+    louchs.append([x, y])
+
+
+def cangee(x, y, new_valeur):
+    terrains[x][y] = new_valeur
+    louche.append([x, y])
+
+
 def shem(shema, x, y):
     if 1 < y or shema[0] == -2 and shema[5] == -2:
         if shema[0] == -2 or terrain[x][y - 1] == shema[0]:
@@ -162,30 +181,30 @@ def shem(shema, x, y):
                             if y < cell_size[1] or shema[4] == -2 and shema[9] == -2:
                                 if shema[4] == -2 or terrain[x][y + 1] == shema[4]:
                                     if not shema[5] == -2:
-                                        terrains[x][y - 1] = shema[5]
+                                        cange(x, y - 1, shema[5])
                                     if not shema[6] == -2:
-                                        terrains[x - 1][y] = shema[6]
+                                        cange(x - 1, y, shema[6])
                                     if not shema[7] == -2:
-                                        terrains[x][y] = shema[7]
+                                        cange(x, y, shema[7])
                                     if not shema[8] == -2:
-                                        terrains[x + 1][y] = shema[8]
+                                        cange(x + 1, y, shema[8])
                                     if not shema[9] == -2:
-                                        terrains[x][y + 1] = shema[9]
+                                        cange(x, y + 1, shema[9])
 
 
 def prop(nb_centre, nb_a_changer, x, y):
     if 1 < x:
         if terrain[x - 1][y] == nb_a_changer:
-            terrains[x - 1][y] = nb_centre
+            cange(x - 1, y, nb_centre)
     if x < cell_size[0] - 1:
         if terrain[x + 1][y] == nb_a_changer:
-            terrains[x + 1][y] = nb_centre
+            cange(x + 1, y, nb_centre)
     if 1 < y:
         if terrain[x][y - 1] == nb_a_changer:
-            terrains[x][y - 1] = nb_centre
+            cange(x, y - 1, nb_centre)
     if y < cell_size[1] - 1:
         if terrain[x][y + 1] == nb_a_changer:
-            terrains[x][y + 1] = nb_centre
+            cange(x, y + 1, nb_centre)
 
 
 def entier(text):
@@ -231,6 +250,39 @@ def compt(x, y, param, param1):
     return nb
 
 
+def verif(x, y):
+    for i in parametre[selec]["propagation"]:
+        if terrain[x][y] == i[0]:
+            prop(i[0], i[1], x, y)
+    for i in parametre[selec]["shema"]:
+        if terrain[x][y] == i[2] or i[2] == -2:
+            shem(i, x, y)
+    for i in parametre[selec]["compteur"]:
+        t = False
+        nb = compt(x, y, i[1], i[0])
+        for o in i[2]:
+            if not t:
+                if o[2] == -2 or o[2] == terrain[x][y]:
+                    if nb == o[0]:
+                        cange(x, y, o[1])
+                        t = True
+
+
+def seul(louchs):
+    for louch in louchs:
+        if louchs.index(louch) is None:
+            louchs.append(louch)
+
+    return louchs
+
+
+def oui(list, point):
+    for e in list:
+        if e == point:
+            return True
+    return False
+
+
 screen.fill((0, 0, 0))
 
 while True:
@@ -252,6 +304,10 @@ while True:
 
     if menu == "simulation":
 
+        pygame.draw.rect(screen, (0, 0, 0), (0, 0, taille_pinceau, 50))
+
+        écrir(str(taille_pinceau), (255, 255, 255), 50, (0, 0))
+
         if click or click_droit:
             p_t = taille_pinceau / 2
             if p_t > int(p_t):
@@ -264,30 +320,55 @@ while True:
                     while y < int(mouse_pos[1] / zoom) + p_t:
                         if 0 < y < cell_size[1] + 1:
                             if not click_droit:
-                                terrains[x][y] = type_select
+                                cange(x, y, type_select)
                             else:
-                                terrains[x][y] = -1
+                                cange(x, y, -1)
+                            color = parametre[selec]["color"][terrain[x][y] + 1]
+                            pygame.draw.rect(screen, color, [x * zoom, y * zoom, zoom, zoom])
                         y += 1
                 x += 1
 
         if not pause:
-            for x in terrain:
-                for y in terrain[x]:
-                    for i in parametre[selec]["propagation"]:
-                        if terrain[x][y] == i[0]:
-                            prop(i[0], i[1], x, y)
-                    for i in parametre[selec]["shema"]:
-                        if terrain[x][y] == i[2] or i[2] == -2:
-                            shem(i, x, y)
-                    for i in parametre[selec]["compteur"]:
-                        t = False
-                        nb = compt(x, y, i[1], i[0])
-                        for o in i[2]:
-                            if not t:
-                                if o[2] == -2 or o[2] == terrain[x][y]:
-                                    if nb == o[0]:
-                                        terrains[x][y] = o[1]
-                                        t = True
+            for louch in louche:
+                x = louch[0]
+                y = louch[1]
+                verif(x, y)
+            louche = []
+            louches = []
+
+        for louch in louchs:
+            x = louch[0]
+            y = louch[1]
+            if not terrain[x][y] == terrains[x][y]:
+                louche.append([x, y])
+                if 1 < y:
+                    if not oui(louche, [x, y - 1]):
+                        louche.append([x, y - 1])
+                if y < cell_size[1]:
+                    if not oui(louche, [x, y + 1]):
+                        louche.append([x, y + 1])
+                if 1 < x:
+                    if not oui(louche, [x - 1, y]):
+                        louche.append([x - 1, y])
+                    if 1 < y:
+                        if not oui(louche, [x - 1, y - 1]):
+                            louche.append([x - 1, y - 1])
+                    if y < cell_size[1]:
+                        if not oui(louche, [x - 1, y + 1]):
+                            louche.append([x - 1, y + 1])
+                if x < cell_size[0]:
+                    if not oui(louche, [x + 1, y]):
+                        louche.append([x + 1, y])
+                    if 1 < y:
+                        if not oui(louche, [x + 1, y - 1]):
+                            louche.append([x + 1, y - 1])
+                    if y < cell_size[1]:
+                        if not oui(louche, [x + 1, y + 1]):
+                            louche.append([x + 1, y + 1])
+                terrain[x][y] = terrains[x][y]
+                color = parametre[selec]["color"][terrain[x][y] + 1]
+                pygame.draw.rect(screen, color, [x * zoom, y * zoom, zoom, zoom])
+        pygame.draw.rect(screen, parametre[selec]["color"][type_select + 1], [0, 0, zoom, zoom])
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -297,6 +378,8 @@ while True:
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     quit()
+                elif event.key == pygame.K_u:
+                    print(parametre[selec])
                 elif event.key == pygame.K_SPACE:
                     pause = not pause
                 elif event.key == pygame.K_DOWN:
@@ -339,14 +422,7 @@ while True:
                         if not f:
                             non = False
                             if 0 < x < cell_size[0] and 0 < y < cell_size[1]:
-                                if not terrain[x][y] == 5:
-                                    click = True
-                                else:
-                                    if x + 1 < cell_size[0]:
-                                        if terrain[x + 1][y] == 0:
-                                            terrains[x + 1][y] = 2
-                                        elif terrain[x + 1][y] == 1:
-                                            terrains[x + 1][y] = 0
+                                click = True
                         else:
                             if not pos:
                                 pos = [x + 1, y + 1]
@@ -370,19 +446,7 @@ while True:
                 if event.key == pygame.K_f:
                     f = False
 
-        for x in terrain:
-            for y in terrain[x]:
-                if not terrain[x][y] == terrains[x][y] or terrain[x][y] == 6:
-                    terrain[x][y] = terrains[x][y]
-                    color = parametre[selec]["color"][terrain[x][y] + 1]
-                    if terrain[x][y] == 6:
-                        if 0 < y:
-                            if terrain[x][y - 1] == 0:
-                                color = (255, 255, 255)
-                            else:
-                                color = (100, 100, 100)
-                    pygame.draw.rect(screen, color, [x * zoom, y * zoom, zoom, zoom])
-        pygame.draw.rect(screen, parametre[selec]["color"][type_select + 1], [0, 0, zoom, zoom])
+        louchs = []
 
     elif menu == "parametre":
 
@@ -579,7 +643,7 @@ while True:
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     quit()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN: 
                 if event.button == 1:
                     if b_select == "CREATE":
                         cell_size = parametre["size"]
